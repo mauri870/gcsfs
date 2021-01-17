@@ -49,9 +49,9 @@ files, err := fs.ReadDir(gfs, ".")
 matches, err := fs.Glob(gfs, "a/*")
 
 // Walk directory tree
-err := fs.WalkDir(gfs, ".", func (path string, d fs.DirEntry, err error) error) {
+err := fs.WalkDir(gfs, ".", func (path string, d fs.DirEntry, err error) error {
 	// d.IsDir(), d.Info(), etc...
-} 
+})
 
 // Subtree rooted at dir
 sub, err := fs.Sub(gfs, "b")
