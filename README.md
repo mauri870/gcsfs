@@ -11,6 +11,12 @@ This package implements the io/fs interfaces for Google Cloud Storage buckets.
 ## Installation
 
 ```bash
+# install go 1.16 tip
+go get golang.org/dl/go1.16beta1
+go1.16beta1 download
+
+alias go="go1.16beta1"
+
 go get github.com/mauri870/gcsfs
 ```
 
