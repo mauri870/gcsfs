@@ -19,7 +19,7 @@ go get github.com/mauri870/gcsfs
 ```go
 // create a new google storage client...
 bucketHandle := client.Bucket("my-bucket")
-gfs := gcsfs.New(context.Background, bucketHandle)
+gfs := gcsfs.New(context.Background(), bucketHandle)
 ```
 
 Take a look at the io/fs docs to familiarize yourself with the methods, a quick intro:
