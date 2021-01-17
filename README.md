@@ -1,4 +1,4 @@
-# gcsfs - Google Cloud Storage for io/fs interfaces
+# gcsfs - Google Cloud Storage for Go's io/fs
 
 This package implements the io/fs interfaces for Google Cloud Storage buckets. 
 
