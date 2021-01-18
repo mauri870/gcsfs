@@ -14,18 +14,19 @@ import (
 
 // FS is a Google Cloud Storage Bucket filesystem implementing fs.FS
 type FS struct {
+	prefix string
 	bucket *storage.BucketHandle
 	ctx    context.Context
 }
 
 // New creates a new FS using the bucket handle
 func New(ctx context.Context, bucketHandle *storage.BucketHandle) *FS {
-	return &FS{bucket: bucketHandle, ctx: ctx}
+	return &FS{prefix: "", bucket: bucketHandle, ctx: ctx}
 }
 
 // NewWithClient creates a new FS using the storage client
 func NewWithClient(ctx context.Context, client *storage.Client, bucketName string) *FS {
-	return &FS{bucket: client.Bucket(bucketName), ctx: ctx}
+	return &FS{prefix: "", bucket: client.Bucket(bucketName), ctx: ctx}
 }
 
 func (fsys *FS) Open(name string) (fs.File, error) {
@@ -75,8 +76,12 @@ func (fsys *FS) ReadFile(name string) ([]byte, error) {
 }
 
 func (fsys *FS) ReadDir(name string) ([]fs.DirEntry, error) {
-	d := fsys.rootDir(name)
+	d := fsys.rootDir(filepath.Join(fsys.prefix, name))
 	return d.ReadDir(-1)
+}
+
+func (fsys *FS) Sub(dir string) (fs.FS, error) {
+	return &FS{prefix: dir, ctx: fsys.ctx, bucket: fsys.bucket}, nil
 }
 
 func (fsys *FS) rootDir(name string) *dir {
@@ -102,14 +107,10 @@ func (f *file) Close() error {
 }
 
 type fileInfo struct {
-	attrs     *storage.ObjectAttrs
-	isRootDir bool
+	attrs *storage.ObjectAttrs
 }
 
 func (f fileInfo) Name() string {
-	if f.attrs == nil {
-		return "."
-	}
 	return filepath.Base(f.attrs.Name)
 }
 
@@ -130,14 +131,11 @@ func (f fileInfo) Mode() os.FileMode {
 }
 
 func (f fileInfo) ModTime() time.Time {
-	if f.attrs == nil {
-		return time.Now()
-	}
 	return f.attrs.Updated
 }
 
 func (f fileInfo) IsDir() bool {
-	return f.isRootDir
+	return false
 }
 
 func (f fileInfo) Sys() interface{} {
@@ -158,7 +156,31 @@ func (d *dir) Read(buf []byte) (int, error) {
 }
 
 func (d *dir) Stat() (fs.FileInfo, error) {
-	return &fileInfo{attrs: nil, isRootDir: true}, nil
+	return d, nil
+}
+
+func (d *dir) IsDir() bool {
+	return true
+}
+
+func (d *dir) ModTime() time.Time {
+	return time.Now()
+}
+
+func (d *dir) Mode() os.FileMode {
+	return os.FileMode(0644)
+}
+
+func (d *dir) Name() string {
+	return filepath.Base(d.prefix)
+}
+
+func (d *dir) Size() int64 {
+	return 0
+}
+
+func (d *dir) Sys() interface{} {
+	return nil
 }
 
 func (d *dir) ReadDir(n int) ([]fs.DirEntry, error) {
