@@ -7,6 +7,7 @@ This package implements the io/fs interfaces for Google Cloud Storage buckets.
 - Go 1.16 is required since the io/fs package will be introduced in this version.
 - 1.16 is currently in beta 1
 - io/fs at the time only exposes read-only interfaces
+- Google Cloud Storage only emulates directories through a prefix, so when interacting with a dir you are indeed just using a prefix to objects.
 
 ## Installation
 
@@ -34,7 +35,7 @@ Take a look at the io/fs docs to familiarize yourself with the methods, a quick 
 // import "io/fs"
 
 // Open a file
-file, err := fs.Open(gfs, "path/to/object.txt")
+file, err := gfs.Open("path/to/object.txt")
 
 // Stat
 finfo, err := fs.Stat(gfs, "path/to/object.txt")
