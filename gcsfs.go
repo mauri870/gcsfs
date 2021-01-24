@@ -19,8 +19,18 @@ type FS struct {
 	ctx    context.Context
 }
 
-// New creates a new FS using the bucket handle
-func New(ctx context.Context, bucketHandle *storage.BucketHandle) *FS {
+// New creates a new FS
+func New(ctx context.Context, bucketName string) (*FS, error) {
+	gcsClient, err := storage.NewClient(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewWithClient(ctx, gcsClient, bucketName), nil
+}
+
+// NewWithBucketHandle creates a new FS using the bucket handle
+func NewWithBucketHandle(ctx context.Context, bucketHandle *storage.BucketHandle) *FS {
 	return &FS{prefix: "", bucket: bucketHandle, ctx: ctx}
 }
 

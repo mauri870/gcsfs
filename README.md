@@ -24,9 +24,8 @@ go get github.com/mauri870/gcsfs
 ## Usage
 
 ```go
-// create a new google storage client...
-bucketHandle := client.Bucket("my-bucket")
-gfs := gcsfs.New(context.Background(), bucketHandle)
+// export GOOGLE_APPLICATION_CREDENTIALS with the path to a service account
+gfs := gcsfs.New(context.Background(), "my-bucket)
 ```
 
 Take a look at the io/fs docs to familiarize yourself with the methods, a quick intro:
