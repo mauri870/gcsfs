@@ -56,3 +56,13 @@ err := fs.WalkDir(gfs, ".", func (path string, d fs.DirEntry, err error) error {
 // Subtree rooted at dir
 sub, err := fs.Sub(gfs, "b")
 ```
+
+## Tests
+
+Unfortunately for now the tests are ran against a private bucket with specific files. Here's the instructions anyway:
+
+```bash
+# export GOOGLE_APPLICATION_CREDENTIALS
+# export GCSFS_TEST_BUCKET
+go1.16beta1 test . -race -cover -count=1
+```
