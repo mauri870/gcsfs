@@ -7,7 +7,6 @@ import (
 	"google.golang.org/api/iterator"
 	"io"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -15,12 +14,14 @@ import (
 
 // FS is a Google Cloud Storage Bucket filesystem implementing fs.FS
 type FS struct {
-	prefix string
-	bucket *storage.BucketHandle
-	ctx    context.Context
+	prefix      string
+	bucket      *storage.BucketHandle
+	bucketAttrs *storage.BucketAttrs
+	ctx         context.Context
 }
 
 // New creates a new FS
+// FIXME: This ctx here is bogus
 func New(ctx context.Context, bucketName string) (*FS, error) {
 	gcsClient, err := storage.NewClient(ctx)
 	if err != nil {
@@ -77,6 +78,14 @@ func (fsys *FS) getFile(name string) (*file, error) {
 }
 
 func (fsys *FS) Open(name string) (fs.File, error) {
+	if fsys.bucketAttrs == nil {
+		attrs, err := fsys.bucket.Attrs(fsys.ctx)
+		if err != nil {
+			return nil, fsys.errorWrap(err)
+		}
+		fsys.bucketAttrs = attrs
+	}
+
 	if !fs.ValidPath(name) {
 		return nil, &fs.PathError{Op: "open", Path: name, Err: fs.ErrNotExist}
 	}
@@ -87,15 +96,6 @@ func (fsys *FS) Open(name string) (fs.File, error) {
 	}
 
 	return fsys.getFile(name)
-}
-
-func (fsys *FS) ReadDir(name string) ([]fs.DirEntry, error) {
-	d := fsys.dir(filepath.Join(fsys.prefix, name))
-	return d.ReadDir(-1)
-}
-
-func (fsys *FS) Sub(dir string) (fs.FS, error) {
-	return &FS{prefix: filepath.Join(fsys.prefix, dir), ctx: fsys.ctx, bucket: fsys.bucket}, nil
 }
 
 func (fsys *FS) dirIter(path string) *storage.ObjectIterator {
@@ -111,7 +111,7 @@ func (fsys *FS) dirIter(path string) *storage.ObjectIterator {
 }
 
 func (fsys *FS) dir(path string) *dir {
-	return &dir{prefix: path, iter: fsys.dirIter(path)}
+	return &dir{prefix: path, bucketCreatedAt: fsys.bucketAttrs.Created, iter: fsys.dirIter(path)}
 }
 
 type file struct {
@@ -120,7 +120,7 @@ type file struct {
 }
 
 func (f *file) Stat() (fs.FileInfo, error) {
-	return fileInfo{attrs: f.attrs}, nil
+	return &fileInfo{attrs: f.attrs}, nil
 }
 
 func (f *file) Read(p []byte) (int, error) {
@@ -140,10 +140,11 @@ func (f *file) ReadDir(count int) ([]fs.DirEntry, error) {
 }
 
 type fileInfo struct {
-	attrs *storage.ObjectAttrs
+	dirModTime time.Time
+	attrs      *storage.ObjectAttrs
 }
 
-func (f fileInfo) Name() string {
+func (f *fileInfo) Name() string {
 	name := f.attrs.Name
 	if f.IsDir() {
 		name = f.attrs.Prefix
@@ -151,40 +152,45 @@ func (f fileInfo) Name() string {
 	return filepath.Base(name)
 }
 
-func (f fileInfo) Type() fs.FileMode {
-	if f.IsDir() {
-		return fs.ModeDir
-	}
-	return fs.FileMode(0644)
+func (f *fileInfo) Type() fs.FileMode {
+	return f.Mode().Type()
 }
 
-func (f fileInfo) Info() (fs.FileInfo, error) {
+func (f *fileInfo) Info() (fs.FileInfo, error) {
 	return f, nil
 }
 
-func (f fileInfo) Size() int64 {
+func (f *fileInfo) Size() int64 {
 	return f.attrs.Size
 }
 
-func (f fileInfo) Mode() os.FileMode {
-	return os.FileMode(0644)
+func (f *fileInfo) Mode() fs.FileMode {
+	if f.IsDir() {
+		return fs.ModeDir
+	}
+
+	return 0
 }
 
-func (f fileInfo) ModTime() time.Time {
+func (f *fileInfo) ModTime() time.Time {
+	if f.IsDir() {
+		return f.dirModTime
+	}
 	return f.attrs.Updated
 }
 
-func (f fileInfo) IsDir() bool {
+func (f *fileInfo) IsDir() bool {
 	return f.attrs.Prefix != ""
 }
 
-func (f fileInfo) Sys() interface{} {
+func (f *fileInfo) Sys() interface{} {
 	return nil
 }
 
 type dir struct {
-	prefix string
-	iter   *storage.ObjectIterator
+	prefix          string
+	bucketCreatedAt time.Time
+	iter            *storage.ObjectIterator
 }
 
 func (d *dir) Close() error {
@@ -204,15 +210,19 @@ func (d *dir) IsDir() bool {
 }
 
 func (d *dir) ModTime() time.Time {
-	return time.Now()
+	return d.bucketCreatedAt
 }
 
-func (d *dir) Mode() os.FileMode {
-	return os.FileMode(0644)
+func (d *dir) Mode() fs.FileMode {
+	return fs.ModeDir
+}
+
+func (d *dir) Type() fs.FileMode {
+	return d.Mode().Type()
 }
 
 func (d *dir) Name() string {
-	return d.prefix
+	return filepath.Base(d.prefix)
 }
 
 func (d *dir) Size() int64 {
@@ -226,6 +236,10 @@ func (d *dir) Sys() interface{} {
 func (d *dir) ReadDir(count int) ([]fs.DirEntry, error) {
 	var list []fs.DirEntry
 	for {
+		if count == len(list) {
+			break
+		}
+
 		attrs, err := d.iter.Next()
 		if err == iterator.Done {
 			break
@@ -235,7 +249,7 @@ func (d *dir) ReadDir(count int) ([]fs.DirEntry, error) {
 			return nil, err
 		}
 
-		finfo := &fileInfo{attrs: attrs}
+		finfo := &fileInfo{dirModTime: d.bucketCreatedAt, attrs: attrs}
 		list = append(list, finfo)
 	}
 

@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"os"
 	"testing"
+	"testing/fstest"
 
 	gcs "cloud.google.com/go/storage"
 )
@@ -107,8 +108,8 @@ func TestDirExists(t *testing.T) {
 		name   string
 		exists bool
 	}{
+		{".", true},
 		{"subdir", true},
-		{"a", true},
 		{"not-found", false},
 	}
 
@@ -118,5 +119,18 @@ func TestDirExists(t *testing.T) {
 		if test.exists != exists {
 			t.Fatalf("dirExists %#v: expected %v but got %v", test.name, test.exists, exists)
 		}
+	}
+}
+
+func TestFS(t *testing.T) {
+	gfs := newTestingFS(t)
+	expectedFiles := []string{
+		"test.txt",
+		"subdir/a.txt",
+		"subdir/b.txt",
+	}
+
+	if err := fstest.TestFS(gfs, expectedFiles...); err != nil {
+		t.Fatal(err)
 	}
 }
