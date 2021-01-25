@@ -55,6 +55,9 @@ err := fs.WalkDir(gfs, ".", func (path string, d fs.DirEntry, err error) error {
 
 // Subtree rooted at dir
 sub, err := fs.Sub(gfs, "b")
+
+// http server serving the contents of the FS
+http.ListenAndServe(":8080", http.FileServer(http.FS(gfs)))
 ```
 
 ## Tests
