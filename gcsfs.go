@@ -3,6 +3,7 @@ package gcsfs
 import (
 	"cloud.google.com/go/storage"
 	"context"
+	"errors"
 	"google.golang.org/api/iterator"
 	"io"
 	"io/fs"
@@ -39,6 +40,14 @@ func NewWithClient(ctx context.Context, client *storage.Client, bucketName strin
 	return &FS{prefix: "", bucket: client.Bucket(bucketName), ctx: ctx}
 }
 
+func (fsys *FS) errorWrap(err error) error {
+	if errors.Is(err, storage.ErrObjectNotExist) || errors.Is(err, storage.ErrBucketNotExist) {
+		err = fs.ErrNotExist
+	}
+
+	return err
+}
+
 func (fsys *FS) Open(name string) (fs.File, error) {
 	if name == "" || name == "." || name == "/" {
 		name = ""
@@ -48,12 +57,12 @@ func (fsys *FS) Open(name string) (fs.File, error) {
 	obj := fsys.bucket.Object(name)
 	r, err := obj.NewReader(fsys.ctx)
 	if err != nil {
-		return nil, err
+		return nil, fsys.errorWrap(err)
 	}
 
 	attrs, err := obj.Attrs(fsys.ctx)
 	if err != nil {
-		return nil, err
+		return nil, fsys.errorWrap(err)
 	}
 
 	return &file{reader: r, attrs: attrs}, nil
@@ -69,7 +78,7 @@ func (fsys *FS) Stat(name string) (fs.FileInfo, error) {
 
 	attrs, err := obj.Attrs(fsys.ctx)
 	if err != nil {
-		return nil, err
+		return nil, fsys.errorWrap(err)
 	}
 
 	return &fileInfo{attrs: attrs}, nil
