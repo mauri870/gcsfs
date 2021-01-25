@@ -25,7 +25,7 @@ go get github.com/mauri870/gcsfs
 
 ```go
 // export GOOGLE_APPLICATION_CREDENTIALS with the path to a service account
-gfs := gcsfs.New(context.Background(), "my-bucket)
+gfs := gcsfs.New("my-bucket)
 ```
 
 Take a look at the io/fs docs to familiarize yourself with the methods, a quick intro:

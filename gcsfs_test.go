@@ -3,6 +3,7 @@ package gcsfs
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io/fs"
 	"os"
 	"testing"
@@ -14,11 +15,17 @@ import (
 var (
 	testBucketName     = os.Getenv("GCSFS_TEST_BUCKET")
 	gcsFSCached    *FS = nil
-	testingCtx         = context.Background()
 )
 
+func init() {
+	if cred := os.Getenv("GOOGLE_APPLICATION_CREDENTIALS"); cred == "" {
+		fmt.Println("Please set GOOGLE_APPLICATION_CREDENTIALS pointing to a valid service account file.")
+		os.Exit(1)
+	}
+}
+
 func newTestingStorageClient(t *testing.T) *gcs.Client {
-	gcsClient, err := gcs.NewClient(testingCtx)
+	gcsClient, err := gcs.NewClient(context.TODO())
 	if err != nil {
 		t.Error("Failed to create new google cloud storage client")
 	}
@@ -26,7 +33,7 @@ func newTestingStorageClient(t *testing.T) *gcs.Client {
 }
 
 func newTestingFS(t *testing.T) *FS {
-	gfs, err := New(testingCtx, testBucketName)
+	gfs, err := New(testBucketName)
 	if err != nil {
 		t.Errorf("Failed to create new gcsfs for bucket %s", testBucketName)
 	}
@@ -44,12 +51,12 @@ func TestNew(t *testing.T) {
 
 func TestNewWithBucketHandle(t *testing.T) {
 	gcsClient := newTestingStorageClient(t)
-	_ = NewWithBucketHandle(testingCtx, gcsClient.Bucket(testBucketName))
+	_ = NewWithBucketHandle(gcsClient.Bucket(testBucketName))
 }
 
 func TestNewWithClient(t *testing.T) {
 	gcsClient := newTestingStorageClient(t)
-	_ = NewWithClient(testingCtx, gcsClient, testBucketName)
+	_ = NewWithClient(gcsClient, testBucketName)
 }
 
 func TestOpen(t *testing.T) {

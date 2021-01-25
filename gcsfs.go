@@ -21,24 +21,23 @@ type FS struct {
 }
 
 // New creates a new FS
-// FIXME: This ctx here is bogus
-func New(ctx context.Context, bucketName string) (*FS, error) {
-	gcsClient, err := storage.NewClient(ctx)
+func New(bucketName string) (*FS, error) {
+	gcsClient, err := storage.NewClient(context.TODO())
 	if err != nil {
 		return nil, err
 	}
 
-	return NewWithClient(ctx, gcsClient, bucketName), nil
+	return NewWithClient(gcsClient, bucketName), nil
 }
 
 // NewWithBucketHandle creates a new FS using the bucket handle
-func NewWithBucketHandle(ctx context.Context, bucketHandle *storage.BucketHandle) *FS {
-	return &FS{prefix: "", bucket: bucketHandle, ctx: ctx}
+func NewWithBucketHandle(bucketHandle *storage.BucketHandle) *FS {
+	return &FS{prefix: "", bucket: bucketHandle, ctx: context.TODO()}
 }
 
 // NewWithClient creates a new FS using the storage client
-func NewWithClient(ctx context.Context, client *storage.Client, bucketName string) *FS {
-	return &FS{prefix: "", bucket: client.Bucket(bucketName), ctx: ctx}
+func NewWithClient(client *storage.Client, bucketName string) *FS {
+	return &FS{prefix: "", bucket: client.Bucket(bucketName), ctx: context.TODO()}
 }
 
 func (fsys *FS) errorWrap(err error) error {
