@@ -7,9 +7,9 @@ import (
 	"google.golang.org/api/iterator"
 	"io"
 	"io/fs"
-	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -48,12 +48,20 @@ func (fsys *FS) errorWrap(err error) error {
 	return err
 }
 
-func (fsys *FS) Open(name string) (fs.File, error) {
-	if name == "" || name == "." || name == "/" {
-		name = ""
-		return fsys.rootDir(name), nil
+func (fsys *FS) dirExists(name string) bool {
+	if name == "." || name == "" {
+		return true
 	}
 
+	iter := fsys.dirIter(name)
+	if _, err := iter.Next(); err != nil {
+		return false
+	}
+
+	return true
+}
+
+func (fsys *FS) getFile(name string) (*file, error) {
 	obj := fsys.bucket.Object(name)
 	r, err := obj.NewReader(fsys.ctx)
 	if err != nil {
@@ -68,44 +76,42 @@ func (fsys *FS) Open(name string) (fs.File, error) {
 	return &file{reader: r, attrs: attrs}, nil
 }
 
-func (fsys *FS) Stat(name string) (fs.FileInfo, error) {
-	if name == "" || name == "." || name == "/" {
-		name = ""
-		return fsys.rootDir(name).Stat()
+func (fsys *FS) Open(name string) (fs.File, error) {
+	if !fs.ValidPath(name) {
+		return nil, &fs.PathError{Op: "open", Path: name, Err: fs.ErrNotExist}
 	}
 
-	obj := fsys.bucket.Object(name)
-
-	attrs, err := obj.Attrs(fsys.ctx)
-	if err != nil {
-		return nil, fsys.errorWrap(err)
+	name = filepath.Join(fsys.prefix, name)
+	if fsys.dirExists(name) {
+		return fsys.dir(name), nil
 	}
 
-	return &fileInfo{attrs: attrs}, nil
-
-}
-
-func (fsys *FS) ReadFile(name string) ([]byte, error) {
-	f, err := fsys.Open(name)
-	if err != nil {
-		return nil, err
-	}
-
-	return ioutil.ReadAll(f)
+	return fsys.getFile(name)
 }
 
 func (fsys *FS) ReadDir(name string) ([]fs.DirEntry, error) {
-	d := fsys.rootDir(filepath.Join(fsys.prefix, name))
+	d := fsys.dir(filepath.Join(fsys.prefix, name))
 	return d.ReadDir(-1)
 }
 
 func (fsys *FS) Sub(dir string) (fs.FS, error) {
-	return &FS{prefix: dir, ctx: fsys.ctx, bucket: fsys.bucket}, nil
+	return &FS{prefix: filepath.Join(fsys.prefix, dir), ctx: fsys.ctx, bucket: fsys.bucket}, nil
 }
 
-func (fsys *FS) rootDir(name string) *dir {
-	it := fsys.bucket.Objects(fsys.ctx, &storage.Query{Prefix: name})
-	return &dir{prefix: name, iter: it}
+func (fsys *FS) dirIter(path string) *storage.ObjectIterator {
+	if path == "." {
+		path = ""
+	}
+
+	if path != "" && !strings.HasSuffix(path, "/") {
+		path += "/"
+	}
+
+	return fsys.bucket.Objects(fsys.ctx, &storage.Query{Prefix: path, StartOffset: path, Delimiter: "/"})
+}
+
+func (fsys *FS) dir(path string) *dir {
+	return &dir{prefix: path, iter: fsys.dirIter(path)}
 }
 
 type file struct {
@@ -125,15 +131,30 @@ func (f *file) Close() error {
 	return f.reader.Close()
 }
 
+func (f *file) ReadDir(count int) ([]fs.DirEntry, error) {
+	return nil, &fs.PathError{
+		Op:   "read",
+		Path: f.attrs.Name,
+		Err:  errors.New("is not a directory"),
+	}
+}
+
 type fileInfo struct {
 	attrs *storage.ObjectAttrs
 }
 
 func (f fileInfo) Name() string {
-	return filepath.Base(f.attrs.Name)
+	name := f.attrs.Name
+	if f.IsDir() {
+		name = f.attrs.Prefix
+	}
+	return filepath.Base(name)
 }
 
 func (f fileInfo) Type() fs.FileMode {
+	if f.IsDir() {
+		return fs.ModeDir
+	}
 	return fs.FileMode(0644)
 }
 
@@ -154,7 +175,7 @@ func (f fileInfo) ModTime() time.Time {
 }
 
 func (f fileInfo) IsDir() bool {
-	return false
+	return f.attrs.Prefix != ""
 }
 
 func (f fileInfo) Sys() interface{} {
@@ -191,7 +212,7 @@ func (d *dir) Mode() os.FileMode {
 }
 
 func (d *dir) Name() string {
-	return filepath.Base(d.prefix)
+	return d.prefix
 }
 
 func (d *dir) Size() int64 {
@@ -202,18 +223,15 @@ func (d *dir) Sys() interface{} {
 	return nil
 }
 
-func (d *dir) ReadDir(n int) ([]fs.DirEntry, error) {
-	if n == 0 {
-		return nil, nil
-	}
-
+func (d *dir) ReadDir(count int) ([]fs.DirEntry, error) {
 	var list []fs.DirEntry
-	i := 0
-	for ; i < n || n == -1; i++ {
+	for {
 		attrs, err := d.iter.Next()
 		if err == iterator.Done {
 			break
-		} else if err != nil {
+		}
+
+		if err != nil {
 			return nil, err
 		}
 
@@ -221,8 +239,8 @@ func (d *dir) ReadDir(n int) ([]fs.DirEntry, error) {
 		list = append(list, finfo)
 	}
 
-	if i == 0 {
-		return nil, nil
+	if len(list) == 0 && count > 0 {
+		return nil, io.EOF
 	}
 
 	return list, nil
