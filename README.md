@@ -62,10 +62,6 @@ http.ListenAndServe(":8080", http.FileServer(http.FS(gfs)))
 
 ## Tests
 
-Unfortunately for now the tests are ran against a private bucket with specific files. Here's the instructions anyway:
-
 ```bash
-# export GOOGLE_APPLICATION_CREDENTIALS
-# export GCSFS_TEST_BUCKET
 go1.16beta1 test . -race -cover -count=1
 ```

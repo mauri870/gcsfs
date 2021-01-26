@@ -3,29 +3,24 @@ package gcsfs
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io/fs"
-	"os"
 	"testing"
 	"testing/fstest"
 
 	gcs "cloud.google.com/go/storage"
+	"google.golang.org/api/option"
 )
 
 var (
-	testBucketName     = os.Getenv("GCSFS_TEST_BUCKET")
-	gcsFSCached    *FS = nil
+	gcsFSCached *FS = nil
 )
 
-func init() {
-	if cred := os.Getenv("GOOGLE_APPLICATION_CREDENTIALS"); cred == "" {
-		fmt.Println("Please set GOOGLE_APPLICATION_CREDENTIALS pointing to a valid service account file.")
-		os.Exit(1)
-	}
-}
+const (
+	testBucketName = "gcsfs-io-fs-test-files"
+)
 
 func newTestingStorageClient(t *testing.T) *gcs.Client {
-	gcsClient, err := gcs.NewClient(context.TODO())
+	gcsClient, err := gcs.NewClient(context.TODO(), option.WithoutAuthentication())
 	if err != nil {
 		t.Error("Failed to create new google cloud storage client")
 	}
@@ -33,20 +28,13 @@ func newTestingStorageClient(t *testing.T) *gcs.Client {
 }
 
 func newTestingFS(t *testing.T) *FS {
-	gfs, err := New(testBucketName)
-	if err != nil {
-		t.Errorf("Failed to create new gcsfs for bucket %s", testBucketName)
-	}
+	gfs := NewWithClient(newTestingStorageClient(t), testBucketName)
 
 	if gcsFSCached == nil {
 		gcsFSCached = gfs
 	}
 
 	return gcsFSCached
-}
-
-func TestNew(t *testing.T) {
-	_ = newTestingFS(t)
 }
 
 func TestNewWithBucketHandle(t *testing.T) {
@@ -67,7 +55,9 @@ func TestOpen(t *testing.T) {
 		err  error
 	}{
 		{"test.txt", nil},
+		{"subdir/a.txt", nil},
 		{"404.txt", fs.ErrNotExist},
+		{"subdir/404.txt", fs.ErrNotExist},
 	}
 
 	for _, test := range tests {
@@ -117,6 +107,7 @@ func TestDirExists(t *testing.T) {
 	}{
 		{".", true},
 		{"subdir", true},
+		{"subdir/", true},
 		{"not-found", false},
 	}
 
@@ -134,7 +125,7 @@ func TestFS(t *testing.T) {
 	expectedFiles := []string{
 		"test.txt",
 		"subdir/a.txt",
-		"subdir/b.txt",
+		"a/really/long/dir/hello.txt",
 	}
 
 	if err := fstest.TestFS(gfs, expectedFiles...); err != nil {
