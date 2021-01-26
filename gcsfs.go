@@ -12,7 +12,11 @@ import (
 	"time"
 )
 
-// FS is a Google Cloud Storage Bucket filesystem implementing fs.FS
+var _ fs.FS = (*FS)(nil)
+var _ fs.File = (*file)(nil)
+var _ fs.FileInfo = (*fileInfo)(nil)
+var _ fs.FileInfo = (*dir)(nil)
+
 type FS struct {
 	prefix      string
 	bucket      *storage.BucketHandle
