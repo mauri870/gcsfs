@@ -60,6 +60,9 @@ sub, err := fs.Sub(gfs, "b")
 
 // http server serving the contents of the FS
 http.ListenAndServe(":8080", http.FileServer(http.FS(gfs)))
+
+// You can also create an FS that is bounded to a context, for example a timeout
+gfs = gfs.WithContext(ctx)
 ```
 
 ## Tests
