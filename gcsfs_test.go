@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"testing"
 	"testing/fstest"
+	"time"
 
 	gcs "cloud.google.com/go/storage"
 	"google.golang.org/api/option"
@@ -28,13 +29,31 @@ func newTestingStorageClient(t *testing.T) *gcs.Client {
 }
 
 func newTestingFS(t *testing.T) *FS {
-	gfs := NewWithClient(newTestingStorageClient(t), testBucketName)
-
 	if gcsFSCached == nil {
-		gcsFSCached = gfs
+		gcsFSCached = NewWithClient(newTestingStorageClient(t), testBucketName)
 	}
 
 	return gcsFSCached
+}
+
+func TestWithContext(t *testing.T) {
+	gfs := newTestingFS(t)
+
+	doneChan := make(chan struct{}, 1)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Nanosecond*10)
+	defer cancel()
+	go func(ctx context.Context) {
+		fs.ReadFile(gfs.WithContext(ctx), "test.txt")
+
+		doneChan <- struct{}{}
+	}(ctx)
+
+	select {
+	case <-ctx.Done():
+		// all went right
+	case <-doneChan:
+		t.Error("context timeout in FS should be reached")
+	}
 }
 
 func TestNewWithBucketHandle(t *testing.T) {

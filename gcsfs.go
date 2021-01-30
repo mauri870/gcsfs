@@ -52,6 +52,10 @@ func (fsys *FS) errorWrap(err error) error {
 	return err
 }
 
+func (fsys *FS) WithContext(ctx context.Context) *FS {
+	return &FS{prefix: fsys.prefix, bucket: fsys.bucket, ctx: ctx}
+}
+
 func (fsys *FS) dirExists(name string) bool {
 	if name == "." || name == "" {
 		return true
