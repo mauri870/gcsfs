@@ -85,20 +85,19 @@ func (fsys *FS) getFile(name string) (*file, error) {
 }
 
 func (fsys *FS) Open(name string) (fs.File, error) {
-	if fsys.bucketAttrs == nil {
-		attrs, err := fsys.bucket.Attrs(fsys.ctx)
-		if err != nil {
-			return nil, fsys.errorWrap(err)
-		}
-		fsys.bucketAttrs = attrs
-	}
-
 	if !fs.ValidPath(name) {
 		return nil, &fs.PathError{Op: "open", Path: name, Err: fs.ErrNotExist}
 	}
 
 	name = filepath.Join(fsys.prefix, name)
 	if fsys.dirExists(name) {
+		if fsys.bucketAttrs == nil {
+			attrs, err := fsys.bucket.Attrs(fsys.ctx)
+			if err != nil {
+				return nil, fsys.errorWrap(err)
+			}
+			fsys.bucketAttrs = attrs
+		}
 		return fsys.dir(name), nil
 	}
 
