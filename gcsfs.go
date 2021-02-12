@@ -13,7 +13,7 @@ import (
 )
 
 var _ fs.FS = (*FS)(nil)
-var _ fs.File = (*file)(nil)
+var _ fs.File = (*File)(nil)
 var _ fs.FileInfo = (*fileInfo)(nil)
 var _ fs.FileInfo = (*dir)(nil)
 
@@ -69,19 +69,21 @@ func (fsys *FS) dirExists(name string) bool {
 	return true
 }
 
-func (fsys *FS) getFile(name string) (*file, error) {
+func (fsys *FS) getFile(name string) (*File, error) {
 	obj := fsys.bucket.Object(name)
 	r, err := obj.NewReader(fsys.ctx)
 	if err != nil {
 		return nil, fsys.errorWrap(err)
 	}
 
+	w := obj.NewWriter(fsys.ctx)
+
 	attrs, err := obj.Attrs(fsys.ctx)
 	if err != nil {
 		return nil, fsys.errorWrap(err)
 	}
 
-	return &file{reader: r, attrs: attrs}, nil
+	return &File{reader: r, writer: w, attrs: attrs}, nil
 }
 
 func (fsys *FS) Open(name string) (fs.File, error) {
@@ -120,24 +122,29 @@ func (fsys *FS) dir(path string) *dir {
 	return &dir{prefix: path, bucketCreatedAt: fsys.bucketAttrs.Created, iter: fsys.dirIter(path)}
 }
 
-type file struct {
+type File struct {
 	reader io.ReadCloser
+	writer io.WriteCloser
 	attrs  *storage.ObjectAttrs
 }
 
-func (f *file) Stat() (fs.FileInfo, error) {
+func (f *File) Stat() (fs.FileInfo, error) {
 	return &fileInfo{attrs: f.attrs}, nil
 }
 
-func (f *file) Read(p []byte) (int, error) {
+func (f *File) Read(p []byte) (int, error) {
 	return f.reader.Read(p)
 }
 
-func (f *file) Close() error {
+func (f *File) Write(p []byte) (int, error) {
+	return f.writer.Write(p)
+}
+
+func (f *File) Close() error {
 	return f.reader.Close()
 }
 
-func (f *file) ReadDir(count int) ([]fs.DirEntry, error) {
+func (f *File) ReadDir(count int) ([]fs.DirEntry, error) {
 	return nil, &fs.PathError{
 		Op:   "read",
 		Path: f.attrs.Name,
