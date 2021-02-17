@@ -5,19 +5,12 @@ This package implements the io/fs interfaces for Google Cloud Storage buckets.
 ## Notes
 
 - Go 1.16 is required since the io/fs package will be introduced in this version.
-- 1.16 is currently in rc 1
 - io/fs at the time only exposes read-only interfaces
 - Google Cloud Storage only emulates directories through a prefix, so when interacting with a dir you are indeed just using a prefix to objects.
 
 ## Installation
 
 ```bash
-# install go 1.16 tip
-go get golang.org/dl/go1.16rc1
-go1.16rc1 download
-
-alias go="go1.16rc1"
-
 go get github.com/mauri870/gcsfs
 ```
 
@@ -68,5 +61,5 @@ gfs = gfs.WithContext(ctx)
 ## Tests
 
 ```bash
-go1.16rc1 test . -race -cover -count=1
+go test . -race -cover -count=1
 ```
