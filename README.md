@@ -4,8 +4,8 @@ This package implements the io/fs interfaces for Google Cloud Storage buckets.
 
 ## Notes
 
-- Go 1.16 is required since the io/fs package will be introduced in this version.
-- io/fs at the time only exposes read-only interfaces
+- Go 1.16 is required since the io/fs package was introduced in this version.
+- io/fs only exposes read-only interfaces. By type asserting the return of Open to gcsfs.File you can use a Writer as expected.
 - Google Cloud Storage only emulates directories through a prefix, so when interacting with a dir you are indeed just using a prefix to objects.
 
 ## Installation
@@ -30,6 +30,9 @@ Take a look at the io/fs docs to familiarize yourself with the methods, a quick 
 
 // Open a file
 file, err := gfs.Open("path/to/object.txt")
+
+// Type assertion to be able to use the File as a Writer
+file, ok := file.(*gcsfs.File)
 
 // Stat
 finfo, err := fs.Stat(gfs, "path/to/object.txt")
