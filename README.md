@@ -71,7 +71,7 @@ export GOOGLE_APPLICATION_CREDENTIALS # path to a service account with bucket ac
 ./gcsfs -b bucket-name cat mydir/myfile.txt
 
 # serve files in a http webserver
-./gcsfs -b bucket-name -p 8081
+./gcsfs serve -b bucket-name -p 8081
 ```
 
 ## Tests
