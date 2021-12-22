@@ -1,6 +1,6 @@
 # gcsfs - Google Cloud Storage for Go's io/fs
 
-This package implements the io/fs interfaces for Google Cloud Storage buckets. 
+This package implements the io/fs interfaces for Google Cloud Storage buckets.
 
 ## Notes
 
@@ -59,6 +59,19 @@ http.ListenAndServe(":8080", http.FileServer(http.FS(gfs)))
 
 // You can also create an FS that is bounded to a context, for example a timeout
 gfs = gfs.WithContext(ctx)
+```
+
+## Example command line tool
+
+```bash
+go build ./cmd/gcsfs
+
+export GOOGLE_APPLICATION_CREDENTIALS # path to a service account with bucket access
+# concatenate files
+./gcsfs -b bucket-name cat mydir/myfile.txt
+
+# serve files in a http webserver
+./gcsfs -b bucket-name -p 8081
 ```
 
 ## Tests
