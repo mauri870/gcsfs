@@ -68,10 +68,13 @@ go build ./cmd/gcsfs
 
 export GOOGLE_APPLICATION_CREDENTIALS # path to a service account with bucket access
 # concatenate files
-./gcsfs -b bucket-name cat mydir/myfile.txt
+./gcsfs cat -b bucket-name mydir/myfile.txt
 
 # serve files in a http webserver
 ./gcsfs serve -b bucket-name -p 8081
+
+# show a tree view of files and dirs
+./gcsfs tree -b bucket-name .
 ```
 
 ## Tests
