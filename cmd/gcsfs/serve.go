@@ -31,5 +31,5 @@ var serveCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(serveCmd)
-	rootCmd.PersistentFlags().IntVarP(&port, "port", "p", 8080, "Http server port to listen on")
+	serveCmd.PersistentFlags().IntVarP(&port, "port", "p", 8080, "Http server port to listen on")
 }
