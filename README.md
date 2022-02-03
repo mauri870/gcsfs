@@ -75,6 +75,9 @@ export GOOGLE_APPLICATION_CREDENTIALS # path to a service account with bucket ac
 
 # show a tree view of files and dirs
 ./gcsfs tree -b bucket-name .
+
+# list all files and dirs in a given directory
+./gcsfs ls -b bucket-name .
 ```
 
 ## Tests
