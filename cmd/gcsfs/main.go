@@ -46,7 +46,7 @@ func init() {
 	rootCmd.PersistentFlags().StringP("bucket", "b", "", "Bucket name to use")
 	rootCmd.MarkFlagRequired("bucket")
 
-	rootCmd.PersistentFlags().BoolP("without-authentication", "wa", false, "Disables authentication. Useful to access public buckets")
+	rootCmd.PersistentFlags().BoolP("without-authentication", "w", false, "Disables authentication. Useful to access public buckets")
 }
 
 func main() {
