@@ -27,7 +27,11 @@ var lsCmd = &cobra.Command{
 		}
 
 		for _, file := range files {
-			fmt.Println(file.Name())
+			fmt.Print(file.Name())
+			if file.IsDir() {
+				fmt.Print("/")
+			}
+			fmt.Println()
 		}
 
 		return nil
