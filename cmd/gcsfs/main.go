@@ -33,6 +33,7 @@ func bucketSetupFunc(cmd *cobra.Command, args []string) error {
 
 func init() {
 	rootCmd.PersistentFlags().StringP("bucket", "b", "", "Bucket name to use")
+	rootCmd.MarkFlagRequired("bucket")
 }
 
 func main() {
