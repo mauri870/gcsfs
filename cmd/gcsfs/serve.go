@@ -21,7 +21,7 @@ var serveCmd = &cobra.Command{
 		}
 
 		r := mux.NewRouter()
-		r.PathPrefix("/").Handler(http.FileServer(http.FS(GCSFS)))
+		r.PathPrefix("/").Handler(http.FileServerFS(GCSFS))
 
 		addr := fmt.Sprintf(":%d", port)
 		fmt.Println("Server listening to " + addr)

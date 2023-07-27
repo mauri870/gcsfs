@@ -78,6 +78,9 @@ export GOOGLE_APPLICATION_CREDENTIALS # path to a service account with bucket ac
 
 # list all files and dirs in a given directory
 ./gcsfs ls -b bucket-name .
+
+# creates a zip file with the contents of the bucket
+./gcsfs zip -b bucket-name . ./test.zip
 ```
 
 ## Tests
