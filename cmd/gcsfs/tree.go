@@ -14,10 +14,7 @@ var treeCmd = &cobra.Command{
 	Short: "Displays files and folders as a tree",
 	Long:  "Shows a hierarchical tree of files and folders in the bucket",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		fsys, ok := cmd.Context().Value(contextFSKey).(fs.FS)
-		if !ok {
-			return fmt.Errorf("failed to get fs from context")
-		}
+		fsys := cmd.Context().Value(contextFSKey).(fs.FS)
 
 		rootDir := "."
 		if len(args) > 0 {
