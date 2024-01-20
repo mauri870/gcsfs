@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/gorilla/mux"
 	"github.com/spf13/cobra"
 )
 
@@ -20,12 +19,11 @@ var serveCmd = &cobra.Command{
 			return err
 		}
 
-		r := mux.NewRouter()
-		r.PathPrefix("/").Handler(http.FileServer(http.FS(GCSFS)))
+		http.Handle("/", http.FileServer(http.FS(GCSFS)))
 
 		addr := fmt.Sprintf(":%d", port)
 		fmt.Println("Server listening to " + addr)
-		return http.ListenAndServe(addr, r)
+		return http.ListenAndServe(addr, nil)
 	},
 }
 
