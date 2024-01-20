@@ -12,16 +12,12 @@ var lsCmd = &cobra.Command{
 	Short: "List files",
 	Long:  "List files from a Google Storage Bucket",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		err := bucketSetupFunc(cmd, args)
-		if err != nil {
-			return err
-		}
-
 		if len(args) != 1 {
 			return cmd.Usage()
 		}
 
-		files, err := fs.ReadDir(GCSFS, args[0])
+		fsys := cmd.Context().Value(contextFSKey).(fs.FS)
+		files, err := fs.ReadDir(fsys, args[0])
 		if err != nil {
 			return err
 		}

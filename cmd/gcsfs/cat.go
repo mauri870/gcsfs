@@ -2,6 +2,7 @@ package main
 
 import (
 	"io"
+	"io/fs"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -12,13 +13,10 @@ var catCmd = &cobra.Command{
 	Short: "Concatenate files",
 	Long:  "Concatenate files from a Google Storage Bucket",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		err := bucketSetupFunc(cmd, args)
-		if err != nil {
-			return err
-		}
+		fsys := cmd.Context().Value(contextFSKey).(fs.FS)
 
 		for _, filename := range args {
-			f, err := GCSFS.Open(filename)
+			f, err := fsys.Open(filename)
 			if err != nil {
 				return err
 			}

@@ -14,9 +14,9 @@ var treeCmd = &cobra.Command{
 	Short: "Displays files and folders as a tree",
 	Long:  "Shows a hierarchical tree of files and folders in the bucket",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		err := bucketSetupFunc(cmd, args)
-		if err != nil {
-			return err
+		fsys, ok := cmd.Context().Value(contextFSKey).(fs.FS)
+		if !ok {
+			return fmt.Errorf("failed to get fs from context")
 		}
 
 		rootDir := "."
@@ -28,7 +28,7 @@ var treeCmd = &cobra.Command{
 		tree := treeprint.New()
 		cur := tree
 
-		err = fs.WalkDir(GCSFS, rootDir, func(path string, d fs.DirEntry, err error) error {
+		err := fs.WalkDir(fsys, rootDir, func(path string, d fs.DirEntry, err error) error {
 			if err != nil {
 				return err
 			}

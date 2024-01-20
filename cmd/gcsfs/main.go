@@ -10,7 +10,12 @@ import (
 	"google.golang.org/api/option"
 )
 
-var GCSFS *gcsfs.FS
+type contextKey string
+
+var (
+	GCSFS        *gcsfs.FS
+	contextFSKey contextKey = "fs"
+)
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -18,28 +23,30 @@ var rootCmd = &cobra.Command{
 	Short:        "io/fs.FS interface to GCS",
 	Long:         "Interacts with files inside a Google Storage Bucket using Golang's io/fs.FS",
 	SilenceUsage: true,
-}
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		bucket, err := cmd.Flags().GetString("bucket")
+		if err != nil {
+			return err
+		}
 
-func bucketSetupFunc(cmd *cobra.Command, args []string) error {
-	bucket, err := cmd.Flags().GetString("bucket")
-	if err != nil {
-		return err
-	}
+		var opts []option.ClientOption
 
-	var opts []option.ClientOption
+		if cmd.Flags().Changed("without-authentication") {
+			opts = append(opts, option.WithoutAuthentication())
+		}
 
-	if cmd.Flags().Changed("without-authentication") {
-		opts = append(opts, option.WithoutAuthentication())
-	}
+		gcsClient, err := gcs.NewClient(cmd.Context(), opts...)
+		if err != nil {
+			return err
+		}
 
-	gcsClient, err := gcs.NewClient(context.TODO(), opts...)
-	if err != nil {
-		return err
-	}
+		fsys := gcsfs.NewWithClient(gcsClient, bucket)
 
-	GCSFS = gcsfs.NewWithClient(gcsClient, bucket)
+		ctx := context.WithValue(cmd.Context(), contextFSKey, fsys)
+		cmd.SetContext(ctx)
 
-	return nil
+		return nil
+	},
 }
 
 func init() {

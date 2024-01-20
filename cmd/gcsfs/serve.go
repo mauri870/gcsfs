@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io/fs"
 	"net/http"
 
 	"github.com/spf13/cobra"
@@ -14,12 +15,9 @@ var serveCmd = &cobra.Command{
 	Short: "Serve bucket files using an http server",
 	Long:  "Creates an HTTP server to serve the contents of the bucket",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		err := bucketSetupFunc(cmd, args)
-		if err != nil {
-			return err
-		}
+		fsys := cmd.Context().Value(contextFSKey).(fs.FS)
 
-		http.Handle("/", http.FileServer(http.FS(GCSFS)))
+		http.Handle("/", http.FileServer(http.FS(fsys)))
 
 		addr := fmt.Sprintf(":%d", port)
 		fmt.Println("Server listening to " + addr)
